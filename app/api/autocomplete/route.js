@@ -1,5 +1,5 @@
-import { callClaudeLight } from "@/lib/anthropic";
-import { prompts } from "@/lib/prompts";
+import { callClaudeLight } from "../../../lib/anthropic";
+import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
