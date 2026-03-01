@@ -1,20 +1,37 @@
 import { callClaude } from "../../../lib/anthropic";
 import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
+import { getSession, saveSession, isPro } from "../../../lib/session";
 
 export async function POST(req) {
   try {
-    const { query, sources, maxProblems } = await req.json();
+    const session = getSession();
+    const pro = isPro(session);
+
+    if (!pro && session.scansUsed >= 3) {
+      return NextResponse.json(
+        { error: "Je hebt je 3 gratis scans voor deze maand gebruikt. Upgrade naar Pro voor onbeperkte scans." },
+        { status: 403 }
+      );
+    }
+
+    const { query, sources } = await req.json();
 
     if (!query || !query.trim()) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
+    const maxProblems = pro ? 10 : 6;
     const data = await callClaude(
-      prompts.scan(query, sources || ["reddit", "forums", "reviews"], maxProblems || 6)
+      prompts.scan(query, sources || ["reddit", "forums", "reviews"], maxProblems)
     );
 
-    return NextResponse.json(data);
+    if (!pro) {
+      saveSession({ ...session, scansUsed: session.scansUsed + 1 });
+    }
+
+    const scansLeft = pro ? -1 : Math.max(0, 3 - (session.scansUsed + 1));
+    return NextResponse.json({ ...data, scansLeft });
   } catch (error) {
     console.error("Scan error:", error);
     return NextResponse.json(

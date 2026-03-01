@@ -1,9 +1,18 @@
 import { callClaude } from "../../../lib/anthropic";
 import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
+import { getSession, isPro } from "../../../lib/session";
 
 export async function POST(req) {
   try {
+    const session = getSession();
+    if (!isPro(session)) {
+      return NextResponse.json(
+        { error: "Deep Dive vereist een Pro abonnement." },
+        { status: 403 }
+      );
+    }
+
     const { problem, topic } = await req.json();
 
     if (!problem || !topic) {

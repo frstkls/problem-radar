@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 /* ═══════════════════════════════════════════════════════════
    PROBLEMRADAR — Client Component
@@ -15,7 +15,11 @@ async function api(endpoint, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (data.error) throw new Error(data.error);
+  if (data.error) {
+    const err = new Error(data.error);
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -346,14 +350,48 @@ export default function ProblemRadar() {
   const [suggestions, setSugg] = useState([]);
   const [showSugg, setShowSugg] = useState(false);
   const [suggLoading, setSuggLoading] = useState(false);
+  const [upgraded, setUpgraded] = useState(false);
   const suggTimer = useRef(null);
   const inputRef = useRef();
+
+  // Load plan from server on mount
+  useEffect(() => {
+    fetch("/api/me")
+      .then(r => r.json())
+      .then(d => {
+        setPlan(d.plan || "free");
+        if (d.scansLeft !== undefined && d.scansLeft !== -1) {
+          setScansUsed(Math.max(0, 3 - d.scansLeft));
+        }
+      })
+      .catch(() => {});
+    if (typeof window !== "undefined" && window.location.search.includes("upgraded=true")) {
+      setUpgraded(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const isPro = plan === "pro" || plan === "team";
   const maxP = isPro ? 10 : 6;
   const canScan = isPro || scansUsed < 3;
   const activeSrc = Object.entries(sources).filter(([, v]) => v).map(([k]) => k);
   const gate = (feat, fn) => { if (isPro) return fn(); setPaywall(feat); };
+
+  const handleUpgrade = async (planId) => {
+    setPaywall(null);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setError(data.error || "Betalingen zijn nog niet geconfigureerd.");
+    } catch {
+      setError("Checkout kon niet worden gestart. Probeer opnieuw.");
+    }
+  };
 
   // Autocomplete
   const fetchSugg = useCallback(async (val) => {
@@ -376,15 +414,18 @@ export default function ProblemRadar() {
     try {
       const data = await api("research", { query, sources: activeSrc, maxProblems: maxP });
       setResults(data);
-      if (!isPro) setScansUsed(s => s + 1);
-      setHistory(h => [{ query, date: new Date().toISOString(), results: data }, ...h].slice(0, 20));
-    } catch (e) { setError(e.message); }
+      if (!isPro) setScansUsed(data.scansLeft !== undefined ? Math.max(0, 3 - data.scansLeft) : s => s + 1);
+      if (isPro) setHistory(h => [{ query, date: new Date().toISOString(), results: data }, ...h].slice(0, 50));
+    } catch (e) {
+      if (e.status === 403) setPaywall("unlimited scans");
+      else setError(e.message);
+    }
     setLoading(false);
   }
 
-  async function runDD(p) { gate("Deep Dive", async () => { setLoadingDD(p.id); try { const data = await api("deepdive", { problem: p, topic: results?.topic || query }); setDD(dd => ({ ...dd, [p.id]: data })); } catch (e) { setError(e.message); } setLoadingDD(null); }); }
-  async function runIdeas() { const sel = results?.problems?.filter(p => selectedProblems.has(p.id)) || []; if (!sel.length) return; gate("Idea Generator", async () => { setLoadingIdeas(true); setTab("ideas"); try { const data = await api("ideas", { problems: sel, topic: results?.topic || query }); setIdeas(data); } catch (e) { setError(e.message); } setLoadingIdeas(false); }); }
-  async function runComp() { gate("Competitive Landscape", async () => { setLoadingComp(true); setTab("competitive"); try { const data = await api("competitive", { topic: results?.topic || query }); setComp(data); } catch (e) { setError(e.message); } setLoadingComp(false); }); }
+  async function runDD(p) { gate("Deep Dive", async () => { setLoadingDD(p.id); try { const data = await api("deepdive", { problem: p, topic: results?.topic || query }); setDD(dd => ({ ...dd, [p.id]: data })); } catch (e) { if (e.status === 403) setPaywall("Deep Dive"); else setError(e.message); } setLoadingDD(null); }); }
+  async function runIdeas() { const sel = results?.problems?.filter(p => selectedProblems.has(p.id)) || []; if (!sel.length) return; gate("Idea Generator", async () => { setLoadingIdeas(true); setTab("ideas"); try { const data = await api("ideas", { problems: sel, topic: results?.topic || query }); setIdeas(data); } catch (e) { if (e.status === 403) setPaywall("Idea Generator"); else setError(e.message); } setLoadingIdeas(false); }); }
+  async function runComp() { gate("Competitive Landscape", async () => { setLoadingComp(true); setTab("competitive"); try { const data = await api("competitive", { topic: results?.topic || query }); setComp(data); } catch (e) { if (e.status === 403) setPaywall("Competitive Landscape"); else setError(e.message); } setLoadingComp(false); }); }
 
   const toggleSel = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -403,7 +444,14 @@ export default function ProblemRadar() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.t }}>
-      {paywall && <Paywall feature={paywall} onClose={() => setPaywall(null)} onSelect={p => { setPlan(p); setPaywall(null); }} />}
+      {paywall && <Paywall feature={paywall} onClose={() => setPaywall(null)} onSelect={handleUpgrade} />}
+
+      {upgraded && (
+        <div style={{ background: "#F0FDF4", borderBottom: "1px solid #BBF7D0", padding: "11px 24px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#15803D" }}>🎉 Welkom bij Pro! Alle functies zijn nu ontgrendeld.</span>
+          <button onClick={() => setUpgraded(false)} style={{ background: "none", border: "none", color: C.tD, cursor: "pointer", fontSize: 14, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
 
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${C.brd}`, background: C.s1, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -497,7 +545,26 @@ export default function ProblemRadar() {
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
               <Btn small primary onClick={runIdeas} disabled={selectedProblems.size === 0 || loadingIdeas}>💡 Generate Ideas {selectedProblems.size > 0 ? `(${selectedProblems.size})` : ""}</Btn>
               <Btn small onClick={runComp} disabled={loadingComp}>⚔️ Map Competitors</Btn>
-              <Btn small ghost onClick={() => gate("Export", () => { const blob = new Blob([JSON.stringify({ ...results, deepDives, ideas, competitive }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `problemradar-${results.topic?.replace(/\s+/g, "-") || "export"}.json`; a.click(); })}>📥 Export</Btn>
+              <Btn small ghost onClick={() => gate("Export", () => {
+                const headers = ["#", "Title", "Category", "Score", "Frequency", "Severity", "Description", "Target Audience", "Potential Approach"];
+                const rows = (results.problems || []).map((p, i) => [
+                  i + 1,
+                  `"${(p.title || "").replace(/"/g, '""')}"`,
+                  p.category || "",
+                  p.opportunityScore || "",
+                  p.frequency || "",
+                  p.severity || "",
+                  `"${(p.description || "").replace(/"/g, '""')}"`,
+                  `"${(p.targetAudience || "").replace(/"/g, '""')}"`,
+                  `"${(p.potentialApproach || "").replace(/"/g, '""')}"`,
+                ].join(","));
+                const csv = [headers.join(","), ...rows].join("\n");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `problemradar-${(results.topic || "export").replace(/\s+/g, "-")}.csv`;
+                a.click();
+              })}>📥 Export CSV</Btn>
               <div style={{ marginLeft: "auto", display: "flex", gap: 5, alignItems: "center" }}>
                 <span style={{ fontSize: 10, color: C.tDD, fontWeight: 800 }}>SORT:</span>
                 {[["score", "Opportunity"], ["severity", "Severity"], ["frequency", "Frequency"]].map(([k, l]) => <button key={k} onClick={() => setSort(k)} style={{ padding: "4px 10px", borderRadius: 8, background: sortBy === k ? C.accS : "transparent", border: `1px solid ${sortBy === k ? C.acc + "33" : "transparent"}`, color: sortBy === k ? C.acc : C.tDD, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>{l}</button>)}
@@ -524,7 +591,32 @@ export default function ProblemRadar() {
 
         {tab === "ideas" && <div className="animate-fadeIn">{loadingIdeas && <Loader text="Generating startup ideas" />}{ideas?.ideas?.map((idea, i) => <IdeaCard key={idea.id} idea={idea} idx={i} />)}{!loadingIdeas && !ideas && <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Select problems and click "Generate Ideas".</div>}</div>}
         {tab === "competitive" && <div className="animate-fadeIn">{loadingComp && <Loader text="Mapping competitive landscape" />}{competitive && <CompPanel data={competitive} />}{!loadingComp && !competitive && <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Click "Map Competitors" to analyze.</div>}</div>}
-        {tab === "history" && <div className="animate-fadeIn">{history.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: C.tD }}>No history yet.</div> : history.map((h, i) => <div key={i} onClick={() => { setResults(h.results); setQuery(h.query); setTab("scan"); }} style={{ background: C.s1, borderRadius: 14, padding: "16px 20px", border: `1px solid ${C.brd}`, cursor: "pointer", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ fontWeight: 700, color: C.t, fontSize: 14 }}>{h.results?.topic || h.query}</div><div style={{ fontSize: 12, color: C.tD, marginTop: 2 }}>{h.results?.problems?.length || 0} problems</div></div><div style={{ fontSize: 11, color: C.tDD }}>{new Date(h.date).toLocaleDateString()}</div></div></div>)}</div>}
+        {tab === "history" && (
+          <div className="animate-fadeIn">
+            {!isPro ? (
+              <div style={{ textAlign: "center", padding: "50px 20px" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.t, marginBottom: 6 }}>Research History is een Pro-functie</div>
+                <div style={{ fontSize: 13, color: C.tM, marginBottom: 20, maxWidth: 340, margin: "0 auto 20px" }}>Bewaar al je onderzoeken en herlaad ze met één klik.</div>
+                <Btn primary small onClick={() => setPaywall("Research History")}>Upgrade naar Pro</Btn>
+              </div>
+            ) : history.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Nog geen geschiedenis. Start een scan om te beginnen.</div>
+            ) : (
+              history.map((h, i) => (
+                <div key={i} onClick={() => { setResults(h.results); setQuery(h.query); setTab("scan"); }} style={{ background: C.s1, borderRadius: 14, padding: "16px 20px", border: `1px solid ${C.brd}`, cursor: "pointer", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: C.t, fontSize: 14 }}>{h.results?.topic || h.query}</div>
+                      <div style={{ fontSize: 12, color: C.tD, marginTop: 2 }}>{h.results?.problems?.length || 0} problems</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.tDD }}>{new Date(h.date).toLocaleDateString()}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {/* Empty State */}
         {!loading && !results && !error && (
@@ -551,7 +643,7 @@ export default function ProblemRadar() {
                   <div style={{ fontSize: 12, color: C.acc, fontWeight: 700, marginBottom: 12 }}>{p.scansLabel}</div>
                   {p.features.map((f, i) => <div key={i} style={{ fontSize: 12, color: C.tM, padding: "3px 0", display: "flex", gap: 6 }}><span style={{ color: C.g }}>✓</span>{f}</div>)}
                   {p.excluded.map((f, i) => <div key={i} style={{ fontSize: 12, color: C.tDD, padding: "3px 0", display: "flex", gap: 6 }}><span>✗</span>{f}</div>)}
-                  <div style={{ marginTop: 16 }}><Btn primary={p.popular} small style={{ width: "100%", textAlign: "center" }} onClick={() => p.id !== "free" && setPlan(p.id)}>{plan === p.id ? "Current Plan" : p.cta}</Btn></div>
+                  <div style={{ marginTop: 16 }}><Btn primary={p.popular} small style={{ width: "100%", textAlign: "center" }} onClick={() => p.id !== "free" && handleUpgrade(p.id)}>{plan === p.id ? "Current Plan" : p.cta}</Btn></div>
                 </div>
               ))}
             </div>
