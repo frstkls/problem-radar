@@ -1,4 +1,4 @@
-import { callClaudeLight } from "../../../lib/anthropic";
+import { callClaude } from "../../../lib/anthropic";
 import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
 

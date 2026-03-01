@@ -1,4 +1,3 @@
-// Build fix test
 import { callClaudeLight } from "../../../lib/anthropic";
 import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
