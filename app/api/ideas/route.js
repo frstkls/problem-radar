@@ -7,7 +7,14 @@ import { getSession, isPro } from "../../../lib/session";
 
 export async function POST(req) {
   try {
-    // TEMP: Pro check bypassed for testing
+    const session = getSession();
+    if (!isPro(session)) {
+      return NextResponse.json(
+        { error: "Idea Generator vereist een Pro abonnement." },
+        { status: 403 }
+      );
+    }
+
     const { problems, topic } = await req.json();
 
     if (!problems?.length || !topic) {

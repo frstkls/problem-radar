@@ -460,7 +460,7 @@ export default function ProblemRadar() {
       .then(d => {
         setPlan(d.plan || "free");
         if (d.scansLeft !== undefined && d.scansLeft !== -1) {
-          setScansUsed(Math.max(0, 20 - d.scansLeft));
+          setScansUsed(Math.max(0, 3 - d.scansLeft));
         }
       })
       .catch(() => {});
@@ -472,9 +472,9 @@ export default function ProblemRadar() {
 
   const isPro = plan === "pro" || plan === "team";
   const maxP = isPro ? 10 : 6;
-  const canScan = isPro || scansUsed < 20;
+  const canScan = isPro || scansUsed < 3;
   const activeSrc = Object.entries(sources).filter(([, v]) => v).map(([k]) => k);
-  const gate = (feat, fn) => fn(); // TEMP: paywall bypassed for testing
+  const gate = (feat, fn) => { if (isPro) return fn(); setPaywall(feat); };
 
   const handleUpgrade = async (planId) => {
     setPaywall(null);
@@ -528,7 +528,7 @@ export default function ProblemRadar() {
       const data = await api("research", { query, sources: activeSrc, maxProblems: maxP });
       setResults(data);
       setLiveData(!!data.liveData);
-      if (!isPro) setScansUsed(data.scansLeft !== undefined ? Math.max(0, 20 - data.scansLeft) : s => s + 1);
+      if (!isPro) setScansUsed(data.scansLeft !== undefined ? Math.max(0, 3 - data.scansLeft) : s => s + 1);
       if (isPro) setHistory(h => [{ query, date: new Date().toISOString(), results: data }, ...h].slice(0, 50));
     } catch (e) {
       if (e.status === 403) setPaywall("unlimited scans");
@@ -610,7 +610,7 @@ export default function ProblemRadar() {
             <span style={{ fontSize: 18, fontWeight: 800, color: C.t }}>ProblemRadar</span>
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {!isPro && <span style={{ fontSize: 12, color: C.tM }}><span style={{ color: scansUsed >= 20 ? C.r : C.g, fontWeight: 700 }}>{20 - scansUsed}</span> scans left</span>}
+            {!isPro && <span style={{ fontSize: 12, color: C.tM }}><span style={{ color: scansUsed >= 3 ? C.r : C.g, fontWeight: 700 }}>{3 - scansUsed}</span> scans left</span>}
             <Tag color={isPro ? C.acc : C.tD} style={{ cursor: "pointer" }} onClick={() => !isPro && setPaywall("Pro features")}>{plan === "team" ? "👥 Team" : plan === "pro" ? "⚡ Pro" : "Free"}</Tag>
             {!isPro && <Btn small primary onClick={() => setPaywall("all Pro features")}>Upgrade</Btn>}
             <button onClick={() => setDark(d => !d)} title="Toggle dark mode" style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "5px 9px", cursor: "pointer", fontSize: 14, color: C.tM, lineHeight: 1 }}>{dark ? "☀️" : "🌙"}</button>

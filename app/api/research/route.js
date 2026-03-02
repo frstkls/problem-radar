@@ -11,7 +11,7 @@ export async function POST(req) {
     const session = getSession();
     const pro = isPro(session);
 
-    if (!pro && session.scansUsed >= 20) {
+    if (!pro && session.scansUsed >= 3) {
       return NextResponse.json(
         { error: "Je hebt je 3 gratis scans voor deze maand gebruikt. Upgrade naar Pro voor onbeperkte scans." },
         { status: 403 }
@@ -38,7 +38,7 @@ export async function POST(req) {
       saveSession({ ...session, scansUsed: session.scansUsed + 1 });
     }
 
-    const scansLeft = pro ? -1 : Math.max(0, 20 - (session.scansUsed + 1));
+    const scansLeft = pro ? -1 : Math.max(0, 3 - (session.scansUsed + 1));
     return NextResponse.json({ ...data, scansLeft, liveData: !!context });
   } catch (error) {
     console.error("Scan error:", error);
