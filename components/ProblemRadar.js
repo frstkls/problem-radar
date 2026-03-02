@@ -28,22 +28,22 @@ const PLANS = [
   {
     id: "free", name: "Starter", price: 0, period: "",
     scans: 3, scansLabel: "3 scans / month",
-    features: ["Basic problem discovery", "Up to 6 results per scan", "Reddit, forums & review search", "Sort & filter results"],
-    excluded: ["Deep Dive analysis", "Idea Generator", "Competitive landscape", "Export reports", "Research history"],
+    features: ["Basic problem discovery", "Up to 6 results per scan", "7 sources: Reddit, Facebook, forums & more", "Sort, filter & search results", "★ Save & bookmark problems", "Dark mode"],
+    excluded: ["Deep Dive analysis", "Idea Generator", "Competitive landscape", "CSV export", "Research history"],
     cta: "Current Plan", color: "#8C95AA",
   },
   {
     id: "pro", name: "Pro", price: 29, period: "/mo",
     scans: -1, scansLabel: "Unlimited scans", popular: true,
-    features: ["Everything in Starter", "Unlimited scans", "Up to 10 results per scan", "Deep Dive per problem", "AI Idea Generator", "Competitive landscape", "PDF & CSV export", "Research history"],
-    excluded: ["Team workspace", "Shared library"],
+    features: ["Everything in Starter", "Unlimited scans", "Up to 10 results per scan", "Deep Dive analysis per problem", "AI Idea Generator", "Competitive landscape", "CSV export (all 12 fields + deep dive)", "Research history"],
+    excluded: [],
     cta: "Upgrade to Pro", color: "#E85D24",
   },
   {
     id: "team", name: "Team", price: 79, period: "/mo",
     scans: -1, scansLabel: "Unlimited scans",
-    features: ["Everything in Pro", "Up to 5 team members", "Shared research library", "Team workspace", "Priority support"],
-    excluded: [],
+    features: ["Everything in Pro", "Priority support", "Early access to new features"],
+    excluded: ["Team workspace (coming soon)", "Shared library (coming soon)"],
     cta: "Start Team Plan", color: "#7C3AED",
   },
 ];
@@ -425,6 +425,11 @@ export default function ProblemRadar() {
   const suggTimer = useRef(null);
   const inputRef = useRef();
 
+  // Newsletter state
+  const [nlEmail, setNlEmail] = useState("");
+  const [nlStatus, setNlStatus] = useState(null); // null | "ok" | "err"
+  const [nlMsg, setNlMsg] = useState("");
+
   // Persist session to localStorage
   useEffect(() => {
     try {
@@ -484,6 +489,20 @@ export default function ProblemRadar() {
     } catch {
       setError("Checkout kon niet worden gestart. Probeer opnieuw.");
     }
+  };
+
+  const handleNlSubscribe = async () => {
+    setNlStatus(null);
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: nlEmail }),
+      });
+      const data = await res.json();
+      if (data.success) { setNlStatus("ok"); setNlMsg("Aangemeld!"); setNlEmail(""); }
+      else { setNlStatus("err"); setNlMsg(data.error || "Aanmelden mislukt."); }
+    } catch { setNlStatus("err"); setNlMsg("Aanmelden mislukt."); }
   };
 
   // Autocomplete
@@ -836,8 +855,25 @@ export default function ProblemRadar() {
         )}
       </main>
 
-      <footer style={{ borderTop: `1px solid ${C.brd}`, padding: "14px 24px", textAlign: "center", fontSize: 11, color: C.tDD, background: C.s1 }}>
-        ProblemRadar · AI-powered problem discovery for entrepreneurs · Powered by Claude
+      <footer style={{ borderTop: `1px solid ${C.brd}`, padding: "20px 24px", background: C.s1 }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ fontSize: 11, color: C.tDD }}>ProblemRadar · AI-powered problem discovery · Powered by Claude</div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+            <div style={{ fontSize: 11, color: C.tM, fontWeight: 600 }}>Get weekly market insights — no spam</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={nlEmail}
+                onChange={e => setNlEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleNlSubscribe()}
+                style={{ background: C.bg, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "7px 12px", color: C.t, fontSize: 12, outline: "none", width: 190 }}
+              />
+              <Btn primary small onClick={handleNlSubscribe} disabled={!nlEmail}>Subscribe</Btn>
+            </div>
+            {nlStatus && <div style={{ fontSize: 11, color: nlStatus === "ok" ? C.g : C.r }}>{nlMsg}</div>}
+          </div>
+        </div>
       </footer>
     </div>
   );
