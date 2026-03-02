@@ -11,7 +11,7 @@ export async function GET() {
   if (pro && session.stripeSubscriptionId && isSubscriptionCancelled(session.stripeSubscriptionId)) {
     const downgraded = { ...session, plan: "free" };
     saveSession(downgraded);
-    return NextResponse.json({ plan: "free", scansLeft: Math.max(0, 3 - session.scansUsed) });
+    return NextResponse.json({ plan: "free", scansLeft: Math.max(0, 20 - session.scansUsed) });
   }
 
   // Verify subscription is still active with Stripe (detects cancellations not yet in memory)
@@ -21,7 +21,7 @@ export async function GET() {
       if (sub.status !== "active" && sub.status !== "trialing") {
         const downgraded = { ...session, plan: "free" };
         saveSession(downgraded);
-        return NextResponse.json({ plan: "free", scansLeft: Math.max(0, 3 - session.scansUsed) });
+        return NextResponse.json({ plan: "free", scansLeft: Math.max(0, 20 - session.scansUsed) });
       }
     } catch {
       // Ignore Stripe errors — trust the cookie
@@ -30,6 +30,6 @@ export async function GET() {
 
   return NextResponse.json({
     plan: session.plan,
-    scansLeft: pro ? -1 : Math.max(0, 3 - session.scansUsed),
+    scansLeft: pro ? -1 : Math.max(0, 20 - session.scansUsed),
   });
 }
