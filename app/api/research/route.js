@@ -1,6 +1,6 @@
 export const maxDuration = 120;
 
-import { callClaude } from "../../../lib/anthropic";
+import { callClaude, sanitizeInput } from "../../../lib/anthropic";
 import { prompts } from "../../../lib/prompts";
 import { NextResponse } from "next/server";
 import { getSession, saveSession, isPro } from "../../../lib/session";
@@ -18,14 +18,15 @@ export async function POST(req) {
     }
 
     const { query, sources } = await req.json();
+    const cleanQuery = sanitizeInput(query, 300);
 
-    if (!query || !query.trim()) {
+    if (!cleanQuery) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
     const maxProblems = pro ? 10 : 6;
     const data = await callClaude(
-      prompts.scan(query, sources || ["reddit", "forums", "reviews"], maxProblems)
+      prompts.scan(cleanQuery, sources || ["reddit", "forums", "reviews"], maxProblems)
     );
 
     if (!pro) {

@@ -49,23 +49,25 @@ const PLANS = [
 ];
 
 // ── Colors ──────────────────────────────────────────────────
+// Surface & text colors use CSS custom properties (for dark mode)
+// Accent colors are fixed
 const C = {
-  bg: "#F8F9FB", s1: "#FFFFFF", s2: "#F1F3F7", s3: "#E8ECF2",
-  brd: "#E2E6EE", brdL: "#D0D6E0",
+  bg: "var(--bg)", s1: "var(--s1)", s2: "var(--s2)", s3: "var(--s3)",
+  brd: "var(--brd)", brdL: "var(--brdL)",
   acc: "#E85D24", accG: "linear-gradient(135deg,#E85D24,#F59E0B)",
-  accS: "rgba(232,93,36,0.07)",
-  g: "#059669", gS: "rgba(5,150,105,0.06)",
-  r: "#DC2626", rS: "rgba(220,38,38,0.06)",
-  y: "#D97706", yS: "rgba(217,119,6,0.06)",
-  b: "#2563EB", bS: "rgba(37,99,235,0.06)",
-  p: "#7C3AED", pS: "rgba(124,58,237,0.06)",
+  accS: "rgba(232,93,36,0.09)",
+  g: "#059669", gS: "rgba(5,150,105,0.08)",
+  r: "#DC2626", rS: "rgba(220,38,38,0.08)",
+  y: "#D97706", yS: "rgba(217,119,6,0.08)",
+  b: "#2563EB", bS: "rgba(37,99,235,0.08)",
+  p: "#7C3AED", pS: "rgba(124,58,237,0.08)",
   cy: "#0891B2",
-  t: "#1A1D26", tM: "#5A6175", tD: "#8C95AA", tDD: "#B4BAC9",
+  t: "var(--t)", tM: "var(--tM)", tD: "var(--tD)", tDD: "var(--tDD)",
 };
 
 // ── Micro components ────────────────────────────────────────
 const Tag = ({ children, color = C.acc, style = {} }) => (
-  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${color}10`, color, border: `1px solid ${color}20`, whiteSpace: "nowrap", ...style }}>{children}</span>
+  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}28`, whiteSpace: "nowrap", ...style }}>{children}</span>
 );
 
 const Score = ({ n }) => {
@@ -101,19 +103,50 @@ const Sec = ({ icon, title, color = C.acc, children }) => (
 function Loader({ text = "Scanning" }) {
   const [d, setD] = useState(0);
   const [p, setP] = useState(0);
-  const phases = ["🔍 Searching the web...", "💬 Analyzing Reddit & forums...", "🧠 Identifying patterns...", "📊 Clustering problems...", "⚡ Scoring opportunities...", "✨ Building report..."];
-  useState(() => {
+  const phases = [
+    "🔍 Analyzing your query...",
+    "📱 Scanning Reddit discussions...",
+    "👥 Browsing Facebook Groups...",
+    "🐦 Checking Twitter/X conversations...",
+    "📋 Reading forum threads...",
+    "⭐ Analyzing app store reviews...",
+    "🧠 Identifying patterns...",
+    "📊 Scoring opportunities...",
+    "✨ Building your report...",
+  ];
+  useEffect(() => {
     const a = setInterval(() => setD(v => (v + 1) % 4), 400);
-    const b = setInterval(() => setP(v => (v + 1) % phases.length), 2800);
+    const b = setInterval(() => setP(v => Math.min(v + 1, phases.length - 1)), 2800);
     return () => { clearInterval(a); clearInterval(b); };
-  });
+  }, []);
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "50px 20px" }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `3px solid ${C.s3}`, borderTopColor: C.acc, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `3px solid rgba(232,93,36,0.15)`, borderTopColor: C.acc, animation: "spin 0.8s linear infinite" }} />
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.t, marginBottom: 5 }}>{text}</div>
-        <div style={{ fontSize: 13, color: C.acc, minHeight: 18 }}>{phases[p]}{".".repeat(d)}</div>
+        <div style={{ fontSize: 13, color: C.acc, minHeight: 20 }}>{phases[p]}{".".repeat(d)}</div>
+        <div style={{ fontSize: 11, color: C.tD, marginTop: 6 }}>This can take 20–30 seconds</div>
       </div>
+    </div>
+  );
+}
+
+// ── Stats Bar ───────────────────────────────────────────────
+function StatsBar({ problems }) {
+  const count = problems.length;
+  const avg = count ? Math.round(problems.reduce((s, p) => s + (p.opportunityScore || 0), 0) / count) : 0;
+  const highOpp = problems.filter(p => p.opportunityScore >= 70).length;
+  const catCounts = {};
+  problems.forEach(p => { catCounts[p.category] = (catCounts[p.category] || 0) + 1; });
+  const topCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+      {[["Problems Found", count, C.acc], ["Avg Score", avg, C.b], ["High Opp (≥70)", highOpp, C.g], ["Top Category", topCat, C.p]].map(([l, v, c]) => (
+        <div key={l} style={{ background: C.s1, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.brd}`, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: c, lineHeight: 1.2 }}>{v}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.tD, textTransform: "uppercase", marginTop: 3, letterSpacing: "0.04em" }}>{l}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -203,7 +236,7 @@ function DeepDivePanel({ data }) {
 }
 
 // ── Problem Card ────────────────────────────────────────────
-function ProblemCard({ p, idx, expanded, onToggle, onDeepDive, deepDive, loadingDD }) {
+function ProblemCard({ p, idx, expanded, onToggle, onDeepDive, deepDive, loadingDD, isBookmarked, onToggleBookmark }) {
   const catC = { UX: C.p, Pricing: C.g, Trust: C.r, Access: C.b, Speed: C.y, Communication: C.acc, Quality: "#DB2777", "Missing Feature": C.cy, Legal: "#4F46E5", Sustainability: "#16A34A", Other: C.tD };
   const cc = catC[p.category] || C.tD;
   const fl = { high: "Frequent", medium: "Regular", low: "Occasional" };
@@ -219,7 +252,14 @@ function ProblemCard({ p, idx, expanded, onToggle, onDeepDive, deepDive, loading
             <span style={{ fontSize: 18, fontWeight: 800, color: C.acc, opacity: 0.25 }}>{String(idx + 1).padStart(2, "0")}</span>
             <Tag color={cc}>{p.category}</Tag>
           </div>
-          <Score n={p.opportunityScore} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Score n={p.opportunityScore} />
+            <button
+              onClick={e => { e.stopPropagation(); onToggleBookmark(p); }}
+              title={isBookmarked ? "Remove bookmark" : "Save problem"}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: isBookmarked ? "#F59E0B" : C.tDD, padding: "2px 4px", lineHeight: 1, transition: "color 0.15s" }}
+            >{isBookmarked ? "★" : "☆"}</button>
+          </div>
         </div>
         <h3 style={{ fontSize: 15.5, fontWeight: 700, color: C.t, margin: "0 0 6px", lineHeight: 1.4 }}>{p.title}</h3>
         <p style={{ fontSize: 13, color: C.tM, lineHeight: 1.6, margin: "0 0 10px" }}>{p.description}</p>
@@ -248,7 +288,7 @@ function ProblemCard({ p, idx, expanded, onToggle, onDeepDive, deepDive, loading
 }
 
 // ── Idea Card ───────────────────────────────────────────────
-function IdeaCard({ idea, idx }) {
+function IdeaCard({ idea }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ background: C.s1, borderRadius: 16, border: `1px solid ${C.brd}`, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 12 }}>
@@ -329,21 +369,52 @@ function CompPanel({ data }) {
 export default function ProblemRadar() {
   const [plan, setPlan] = useState("free");
   const [scansUsed, setScansUsed] = useState(0);
-  const [query, setQuery] = useState("");
-  const [sources, setSrc] = useState({ reddit: true, twitter: true, forums: true, reviews: true, news: false, blogs: false });
+
+  // Lazy-initialized from localStorage for session persistence
+  const [query, setQuery] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try { return JSON.parse(localStorage.getItem("pr_last_session") || "{}").query || ""; } catch { return ""; }
+  });
+  const [results, setResults] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem("pr_last_session") || "{}").results || null; } catch { return null; }
+  });
+  const [deepDives, setDD] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("pr_last_session") || "{}").deepDives || {}; } catch { return {}; }
+  });
+  const [ideas, setIdeas] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem("pr_last_session") || "{}").ideas || null; } catch { return null; }
+  });
+  const [competitive, setComp] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem("pr_last_session") || "{}").competitive || null; } catch { return null; }
+  });
+
+  // Bookmarks persisted to pr_bookmarks
+  const [bookmarks, setBookmarks] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("pr_bookmarks") || "{}"); } catch { return {}; }
+  });
+
+  // Dark mode with lazy localStorage init
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pr_dark") === "true";
+  });
+
+  const [sources, setSrc] = useState({ reddit: true, twitter: true, facebook: true, forums: true, reviews: true, news: false, blogs: false });
   const [tab, setTab] = useState("scan");
   const [loading, setLoading] = useState(false);
   const [loadingDD, setLoadingDD] = useState(null);
   const [loadingIdeas, setLoadingIdeas] = useState(false);
   const [loadingComp, setLoadingComp] = useState(false);
-  const [results, setResults] = useState(null);
-  const [deepDives, setDD] = useState({});
-  const [ideas, setIdeas] = useState(null);
-  const [competitive, setComp] = useState(null);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [sortBy, setSort] = useState("score");
   const [filterCat, setFilter] = useState("all");
+  const [searchText, setSearch] = useState("");
   const [selectedProblems, setSelected] = useState(new Set());
   const [history, setHistory] = useState([]);
   const [paywall, setPaywall] = useState(null);
@@ -353,6 +424,28 @@ export default function ProblemRadar() {
   const [upgraded, setUpgraded] = useState(false);
   const suggTimer = useRef(null);
   const inputRef = useRef();
+
+  // Persist session to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("pr_last_session", JSON.stringify({ query, results, deepDives, ideas, competitive }));
+    } catch {}
+  }, [query, results, deepDives, ideas, competitive]);
+
+  // Persist bookmarks to localStorage
+  useEffect(() => {
+    try { localStorage.setItem("pr_bookmarks", JSON.stringify(bookmarks)); } catch {}
+  }, [bookmarks]);
+
+  // Dark mode effect
+  useEffect(() => {
+    if (dark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    try { localStorage.setItem("pr_dark", dark ? "true" : "false"); } catch {}
+  }, [dark]);
 
   // Load plan from server on mount
   useEffect(() => {
@@ -410,7 +503,7 @@ export default function ProblemRadar() {
   // Research actions
   async function runScan() {
     if (!query.trim() || !canScan) return;
-    setLoading(true); setError(null); setResults(null); setIdeas(null); setComp(null); setDD({}); setExpanded(null); setSelected(new Set()); setTab("scan"); setShowSugg(false);
+    setLoading(true); setError(null); setResults(null); setIdeas(null); setComp(null); setDD({}); setExpanded(null); setSelected(new Set()); setTab("scan"); setShowSugg(false); setSearch("");
     try {
       const data = await api("research", { query, sources: activeSrc, maxProblems: maxP });
       setResults(data);
@@ -429,8 +522,20 @@ export default function ProblemRadar() {
 
   const toggleSel = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // Bookmarks
+  const toggleBookmark = (p) => {
+    const key = `${query.slice(0, 40)}::${p.id}`;
+    setBookmarks(b => {
+      const n = { ...b };
+      if (n[key]) { delete n[key]; } else { n[key] = { ...p, _query: query, _savedAt: new Date().toISOString() }; }
+      return n;
+    });
+  };
+  const isBookmarked = (p) => !!bookmarks[`${query.slice(0, 40)}::${p.id}`];
+
   const sorted = results?.problems ? [...results.problems]
     .filter(p => filterCat === "all" || p.category === filterCat)
+    .filter(p => !searchText || [p.title, p.description, p.category, p.targetAudience].some(f => f?.toLowerCase().includes(searchText.toLowerCase())))
     .sort((a, b) => {
       const sev = { critical: 4, high: 3, medium: 2, low: 1 }; const freq = { high: 3, medium: 2, low: 1 };
       if (sortBy === "score") return b.opportunityScore - a.opportunityScore;
@@ -439,8 +544,27 @@ export default function ProblemRadar() {
     }) : [];
   const cats = results?.problems ? [...new Set(results.problems.map(p => p.category))] : [];
 
+  const hasBookmarks = Object.keys(bookmarks).length > 0;
+  const tabs = [
+    ...(results ? [
+      ["scan", "📊 Problems"],
+      ["ideas", "💡 Ideas"],
+      ["competitive", "⚔️ Landscape"],
+      ["history", "📁 History"],
+    ] : []),
+    ...(hasBookmarks ? [["saved", "★ Saved"]] : []),
+  ];
+
   const SUGG = [["🏥 Healthcare", "healthcare problems"], ["🛒 E-commerce", "online shopping frustrations"], ["🏠 Rental Housing", "rental housing problems"], ["💼 Freelancing", "freelancer problems"], ["🎓 Online Education", "online education problems"], ["🐕 Pet Care", "pet care problems"], ["👴 Elder Care", "elderly care problems"], ["🌱 Sustainability", "sustainable living problems"], ["🚗 Electric Vehicles", "EV problems"], ["💰 Personal Finance", "personal finance problems"], ["🧒 Childcare", "childcare problems"], ["🍔 Food Delivery", "food delivery problems"]];
-  const SRC = [["reddit", "💬", "Reddit"], ["twitter", "🐦", "X / Twitter"], ["forums", "🗣️", "Forums"], ["reviews", "⭐", "Reviews"], ["news", "📰", "News"], ["blogs", "✍️", "Blogs"]];
+  const SRC = [
+    ["reddit", "💬", "Reddit"],
+    ["twitter", "🐦", "Twitter/X"],
+    ["facebook", "👥", "Facebook Groups"],
+    ["forums", "🗣️", "Forums"],
+    ["reviews", "⭐", "App Reviews"],
+    ["news", "📰", "News"],
+    ["blogs", "✍️", "Blogs"],
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.t }}>
@@ -456,14 +580,19 @@ export default function ProblemRadar() {
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${C.brd}`, background: C.s1, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: 940, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 54 }}>
-          <button onClick={() => { setResults(null); setTab("scan"); setError(null); setExpanded(null); setIdeas(null); setComp(null); setDD({}); setSelected(new Set()); }} style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <button onClick={() => {
+            setResults(null); setTab("scan"); setError(null); setExpanded(null);
+            setIdeas(null); setComp(null); setDD({}); setSelected(new Set()); setQuery(""); setSearch("");
+            try { localStorage.removeItem("pr_last_session"); } catch {}
+          }} style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: C.accG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff" }}>📡</div>
             <span style={{ fontSize: 18, fontWeight: 800, color: C.t }}>ProblemRadar</span>
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {!isPro && <span style={{ fontSize: 12, color: C.tM }}><span style={{ color: scansUsed >= 3 ? C.r : C.g, fontWeight: 700 }}>{3 - scansUsed}</span> scans left</span>}
             <Tag color={isPro ? C.acc : C.tD} style={{ cursor: "pointer" }} onClick={() => !isPro && setPaywall("Pro features")}>{plan === "team" ? "👥 Team" : plan === "pro" ? "⚡ Pro" : "Free"}</Tag>
             {!isPro && <Btn small primary onClick={() => setPaywall("all Pro features")}>Upgrade</Btn>}
+            <button onClick={() => setDark(d => !d)} title="Toggle dark mode" style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "5px 9px", cursor: "pointer", fontSize: 14, color: C.tM, lineHeight: 1 }}>{dark ? "☀️" : "🌙"}</button>
           </div>
         </div>
       </nav>
@@ -480,7 +609,7 @@ export default function ProblemRadar() {
                 onBlur={() => setTimeout(() => setShowSugg(false), 200)}
                 placeholder="e.g. 'healthcare problems in Europe' or 'freelancer tools'"
                 style={{ width: "100%", padding: "13px 18px", borderRadius: 12, background: C.bg, border: `1px solid ${C.brd}`, color: C.t, fontSize: 14, outline: "none", transition: "border 0.2s" }} />
-              {suggLoading && <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, border: `2px solid ${C.s3}`, borderTopColor: C.acc, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />}
+              {suggLoading && <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, border: `2px solid rgba(232,93,36,0.15)`, borderTopColor: C.acc, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />}
               {showSugg && suggestions.length > 0 && (
                 <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}>
                   <div style={{ padding: "8px 14px 4px", fontSize: 10, fontWeight: 800, color: C.tDD, textTransform: "uppercase", letterSpacing: "0.08em" }}>✨ Suggested queries</div>
@@ -506,15 +635,15 @@ export default function ProblemRadar() {
         </div>
 
         {/* Tabs */}
-        {results && (
+        {tabs.length > 0 && (
           <div style={{ display: "flex", gap: 3, marginBottom: 20, background: C.s1, borderRadius: 14, padding: 3, border: `1px solid ${C.brd}` }}>
-            {[["scan", "📊 Problems"], ["ideas", "💡 Ideas"], ["competitive", "⚔️ Landscape"], ["history", "📁 History"]].map(([k, l]) => (
+            {tabs.map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: "10px 0", borderRadius: 11, border: "none", cursor: "pointer", background: tab === k ? C.accS : "transparent", color: tab === k ? C.acc : C.tD, fontWeight: 700, fontSize: 13, transition: "all 0.15s" }}>{l}</button>
             ))}
           </div>
         )}
 
-        {loading && <Loader text="Scanning the web for problems" />}
+        {loading && <Loader text="Scanning for problems" />}
         {error && (
           <div style={{ background: C.rS, border: `1px solid ${C.r}22`, borderRadius: 16, padding: 24, textAlign: "center", marginBottom: 20 }}>
             <div style={{ fontSize: 15, color: C.r, fontWeight: 700, marginBottom: 6 }}>⚠️ Something went wrong</div>
@@ -532,43 +661,67 @@ export default function ProblemRadar() {
                   <div style={{ fontSize: 10, fontWeight: 800, color: C.acc, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>Research Report</div>
                   <h2 style={{ fontSize: 21, fontWeight: 800, margin: 0, color: C.t }}>{results.topic}</h2>
                 </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <div style={{ background: C.bg, padding: "8px 16px", borderRadius: 12, border: `1px solid ${C.brd}`, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: C.acc }}>{results.problems?.length || 0}</div><div style={{ fontSize: 9, color: C.tD, fontWeight: 800 }}>PROBLEMS</div></div>
-                  <div style={{ background: C.bg, padding: "8px 16px", borderRadius: 12, border: `1px solid ${C.brd}`, textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: C.g }}>{results.problems?.filter(p => p.opportunityScore >= 70).length || 0}</div><div style={{ fontSize: 9, color: C.tD, fontWeight: 800 }}>HIGH OPP.</div></div>
-                </div>
               </div>
               <p style={{ fontSize: 13.5, color: C.tM, lineHeight: 1.7, margin: "0 0 14px" }}>{results.summary}</p>
               {results.trendingTopics?.length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}><span style={{ fontSize: 10, color: C.tDD, fontWeight: 800 }}>TRENDING:</span>{results.trendingTopics.map((t, i) => <Tag key={i} color={C.p}>{t}</Tag>)}</div>}
               {results.marketInsight && <div style={{ background: C.gS, borderRadius: 12, padding: "12px 16px", border: `1px solid ${C.g}18` }}><span style={{ fontSize: 10, fontWeight: 800, color: C.g, textTransform: "uppercase" }}>💎 Market Insight</span><p style={{ fontSize: 12.5, color: C.t, margin: "4px 0 0", lineHeight: 1.5 }}>{results.marketInsight}</p></div>}
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+            {/* Stats bar */}
+            {results.problems?.length > 0 && <StatsBar problems={results.problems} />}
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
               <Btn small primary onClick={runIdeas} disabled={selectedProblems.size === 0 || loadingIdeas}>💡 Generate Ideas {selectedProblems.size > 0 ? `(${selectedProblems.size})` : ""}</Btn>
               <Btn small onClick={runComp} disabled={loadingComp}>⚔️ Map Competitors</Btn>
               <Btn small ghost onClick={() => gate("Export", () => {
-                const headers = ["#", "Title", "Category", "Score", "Frequency", "Severity", "Description", "Target Audience", "Potential Approach"];
-                const rows = (results.problems || []).map((p, i) => [
-                  i + 1,
-                  `"${(p.title || "").replace(/"/g, '""')}"`,
-                  p.category || "",
-                  p.opportunityScore || "",
-                  p.frequency || "",
-                  p.severity || "",
-                  `"${(p.description || "").replace(/"/g, '""')}"`,
-                  `"${(p.targetAudience || "").replace(/"/g, '""')}"`,
-                  `"${(p.potentialApproach || "").replace(/"/g, '""')}"`,
-                ].join(","));
-                const csv = [headers.join(","), ...rows].join("\n");
-                const blob = new Blob([csv], { type: "text/csv" });
+                const topic = results.topic || "export";
+                const BOM = "\uFEFF";
+                const meta = [
+                  `"Topic","${topic.replace(/"/g, '""')}"`,
+                  `"Exported","${new Date().toLocaleDateString()}"`,
+                  `"Total Problems","${results.problems?.length || 0}"`,
+                  "",
+                ];
+                const headers = ["#", "Title", "Category", "Score", "Frequency", "Severity", "Description", "Evidence", "Sources", "Existing Solutions", "Target Audience", "Potential Approach"];
+                const ddHeaders = ["DD: Market Size", "DD: Spending", "DD: Trends", "DD: Best Angle", "DD: Competitors", "DD: Risks"];
+                const rows = (results.problems || []).map((p, i) => {
+                  const dd = deepDives[p.id];
+                  const q = v => `"${(v || "").replace(/"/g, '""')}"`;
+                  const base = [i + 1, q(p.title), p.category || "", p.opportunityScore || "", p.frequency || "", p.severity || "", q(p.description), q(p.evidence), q((p.sources || []).join("; ")), q(p.existingSolutions), q(p.targetAudience), q(p.potentialApproach)];
+                  const ddFields = dd ? [q(dd.marketSize), q(dd.spending), q(dd.trends), q(dd.bestAngle), q((dd.competitors || []).map(c => c.name).join("; ")), q((dd.risks || []).join("; "))] : ["", "", "", "", "", ""];
+                  return [...base, ...ddFields].join(",");
+                });
+                const csv = BOM + [...meta, [...headers, ...ddHeaders].join(","), ...rows].join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
-                a.download = `problemradar-${(results.topic || "export").replace(/\s+/g, "-")}.csv`;
+                a.href = url;
+                a.download = `problemradar-${topic.replace(/\s+/g, "-")}.csv`;
                 a.click();
+                URL.revokeObjectURL(url);
               })}>📥 Export CSV</Btn>
               <div style={{ marginLeft: "auto", display: "flex", gap: 5, alignItems: "center" }}>
                 <span style={{ fontSize: 10, color: C.tDD, fontWeight: 800 }}>SORT:</span>
                 {[["score", "Opportunity"], ["severity", "Severity"], ["frequency", "Frequency"]].map(([k, l]) => <button key={k} onClick={() => setSort(k)} style={{ padding: "4px 10px", borderRadius: 8, background: sortBy === k ? C.accS : "transparent", border: `1px solid ${sortBy === k ? C.acc + "33" : "transparent"}`, color: sortBy === k ? C.acc : C.tDD, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>{l}</button>)}
               </div>
+            </div>
+
+            {/* Search within results */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+              <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
+                <input
+                  value={searchText}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search within results..."
+                  style={{ width: "100%", padding: "7px 32px 7px 12px", borderRadius: 10, background: C.bg, border: `1px solid ${C.brd}`, color: C.t, fontSize: 12, outline: "none" }}
+                />
+                {searchText && (
+                  <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.tD, cursor: "pointer", fontSize: 13, lineHeight: 1 }}>✕</button>
+                )}
+              </div>
+              {searchText && (
+                <span style={{ fontSize: 12, color: C.tD }}>{sorted.length} of {results.problems?.length} problems</span>
+              )}
             </div>
 
             {cats.length > 1 && <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
@@ -579,17 +732,20 @@ export default function ProblemRadar() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {sorted.map((p, i) => (
                 <div key={p.id} style={{ position: "relative" }}>
-                  <div onClick={e => { e.stopPropagation(); toggleSel(p.id); }} style={{ position: "absolute", top: 18, right: 22, zIndex: 10, width: 22, height: 22, borderRadius: 6, border: `2px solid ${selectedProblems.has(p.id) ? C.acc : C.brdL}`, background: selectedProblems.has(p.id) ? C.accS : C.s1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.15s", fontSize: 12, color: C.acc, fontWeight: 800 }}>
+                  <div onClick={e => { e.stopPropagation(); toggleSel(p.id); }} style={{ position: "absolute", top: 18, right: 54, zIndex: 10, width: 22, height: 22, borderRadius: 6, border: `2px solid ${selectedProblems.has(p.id) ? C.acc : C.brdL}`, background: selectedProblems.has(p.id) ? C.accS : C.s1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.15s", fontSize: 12, color: C.acc, fontWeight: 800 }}>
                     {selectedProblems.has(p.id) && "✓"}
                   </div>
-                  <ProblemCard p={p} idx={i} expanded={expanded === p.id} onToggle={() => setExpanded(expanded === p.id ? null : p.id)} onDeepDive={runDD} deepDive={deepDives[p.id]} loadingDD={loadingDD === p.id} />
+                  <ProblemCard p={p} idx={i} expanded={expanded === p.id} onToggle={() => setExpanded(expanded === p.id ? null : p.id)} onDeepDive={runDD} deepDive={deepDives[p.id]} loadingDD={loadingDD === p.id} isBookmarked={isBookmarked(p)} onToggleBookmark={toggleBookmark} />
                 </div>
               ))}
+              {sorted.length === 0 && searchText && (
+                <div style={{ textAlign: "center", padding: 32, color: C.tD }}>No problems match "{searchText}"</div>
+              )}
             </div>
           </div>
         )}
 
-        {tab === "ideas" && <div className="animate-fadeIn">{loadingIdeas && <Loader text="Generating startup ideas" />}{ideas?.ideas?.map((idea, i) => <IdeaCard key={idea.id} idea={idea} idx={i} />)}{!loadingIdeas && !ideas && <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Select problems and click "Generate Ideas".</div>}</div>}
+        {tab === "ideas" && <div className="animate-fadeIn">{loadingIdeas && <Loader text="Generating startup ideas" />}{ideas?.ideas?.map((idea, i) => <IdeaCard key={idea.id || i} idea={idea} />)}{!loadingIdeas && !ideas && <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Select problems and click "Generate Ideas".</div>}</div>}
         {tab === "competitive" && <div className="animate-fadeIn">{loadingComp && <Loader text="Mapping competitive landscape" />}{competitive && <CompPanel data={competitive} />}{!loadingComp && !competitive && <div style={{ textAlign: "center", padding: 40, color: C.tD }}>Click "Map Competitors" to analyze.</div>}</div>}
         {tab === "history" && (
           <div className="animate-fadeIn">
@@ -618,14 +774,43 @@ export default function ProblemRadar() {
           </div>
         )}
 
+        {/* Saved / Bookmarks tab */}
+        {tab === "saved" && (
+          <div className="animate-fadeIn">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: C.t, margin: 0 }}>★ Saved Problems ({Object.keys(bookmarks).length})</h3>
+              <Btn small ghost onClick={() => { if (confirm("Clear all bookmarks?")) setBookmarks({}); }}>Clear All</Btn>
+            </div>
+            {Object.entries(bookmarks)
+              .sort((a, b) => new Date(b[1]._savedAt) - new Date(a[1]._savedAt))
+              .map(([key, p]) => (
+                <div key={key} style={{ background: C.s1, borderRadius: 14, padding: "16px 20px", border: `1px solid ${C.brd}`, marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: C.tD, marginBottom: 4 }}>From: "{p._query}"</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.t, marginBottom: 4 }}>{p.title}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                        <Tag color={C.tD}>{p.category}</Tag>
+                        <Score n={p.opportunityScore} />
+                      </div>
+                      <div style={{ fontSize: 12, color: C.tM, lineHeight: 1.5 }}>{p.description}</div>
+                    </div>
+                    <button onClick={() => setBookmarks(b => { const n = { ...b }; delete n[key]; return n; })} title="Remove bookmark" style={{ background: "none", border: "none", color: C.tD, cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+
         {/* Empty State */}
-        {!loading && !results && !error && (
+        {!loading && !results && !error && tab !== "saved" && (
           <div style={{ textAlign: "center", padding: "50px 20px" }} className="animate-fadeIn">
             <div style={{ fontSize: 48, marginBottom: 16 }}>📡</div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t, marginBottom: 8 }}>Discover what people actually need</h2>
-            <p style={{ fontSize: 14, color: C.tM, maxWidth: 460, margin: "0 auto 36px", lineHeight: 1.7 }}>Enter any market or niche and ProblemRadar scans Reddit, forums, reviews, and social media to find real problems and opportunities.</p>
+            <p style={{ fontSize: 14, color: C.tM, maxWidth: 460, margin: "0 auto 36px", lineHeight: 1.7 }}>Enter any market or niche and ProblemRadar scans Reddit, Facebook Groups, forums, reviews, and social media to find real problems and opportunities.</p>
             <div style={{ display: "flex", justifyContent: "center", gap: 18, flexWrap: "wrap", marginBottom: 44 }}>
-              {[["🔍", "Web Research", "Scans real sources"], ["🧠", "AI Analysis", "Clusters & scores"], ["💡", "Idea Engine", "Generates concepts"], ["⚔️", "Landscape", "Maps competitors"]].map(([ic, t, d]) => (
+              {[["🔍", "AI Research", "Analyzes real sources"], ["🧠", "AI Analysis", "Clusters & scores"], ["💡", "Idea Engine", "Generates concepts"], ["⚔️", "Landscape", "Maps competitors"]].map(([ic, t, d]) => (
                 <div key={t} style={{ background: C.s1, borderRadius: 16, padding: "22px 20px", border: `1px solid ${C.brd}`, width: 165, textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                   <div style={{ fontSize: 26, marginBottom: 8 }}>{ic}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.t, marginBottom: 3 }}>{t}</div>

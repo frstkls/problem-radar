@@ -4,10 +4,36 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
+:root {
+  --bg: #F8F9FB;
+  --s1: #FFFFFF;
+  --s2: #F1F3F7;
+  --s3: #E8ECF2;
+  --brd: #E2E6EE;
+  --brdL: #D0D6E0;
+  --t: #1A1D26;
+  --tM: #5A6175;
+  --tD: #8C95AA;
+  --tDD: #B4BAC9;
+}
+
+html.dark {
+  --bg: #0F1117;
+  --s1: #1C1F2E;
+  --s2: #222638;
+  --s3: #2A2F45;
+  --brd: #2E3348;
+  --brdL: #393E57;
+  --t: #F0F2F7;
+  --tM: #9AA3B8;
+  --tD: #6B7490;
+  --tDD: #4A5168;
+}
+
 body {
   font-family: 'Manrope', sans-serif;
-  background: #F8F9FB;
-  color: #1A1D26;
+  background: var(--bg);
+  color: var(--t);
 }
 
 @keyframes fadeUp {
