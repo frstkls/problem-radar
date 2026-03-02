@@ -474,7 +474,7 @@ export default function ProblemRadar() {
   const maxP = isPro ? 10 : 6;
   const canScan = isPro || scansUsed < 20;
   const activeSrc = Object.entries(sources).filter(([, v]) => v).map(([k]) => k);
-  const gate = (feat, fn) => { if (isPro) return fn(); setPaywall(feat); };
+  const gate = (feat, fn) => fn(); // TEMP: paywall bypassed for testing
 
   const handleUpgrade = async (planId) => {
     setPaywall(null);
