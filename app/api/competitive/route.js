@@ -7,14 +7,7 @@ import { getSession, isPro } from "../../../lib/session";
 
 export async function POST(req) {
   try {
-    const session = getSession();
-    if (!isPro(session)) {
-      return NextResponse.json(
-        { error: "Competitive Landscape vereist een Pro abonnement." },
-        { status: 403 }
-      );
-    }
-
+    // TEMP: Pro check bypassed for testing
     const { topic } = await req.json();
     const cleanTopic = sanitizeInput(topic, 150);
 

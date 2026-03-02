@@ -7,14 +7,7 @@ import { getSession, isPro } from "../../../lib/session";
 
 export async function POST(req) {
   try {
-    const session = getSession();
-    if (!isPro(session)) {
-      return NextResponse.json(
-        { error: "Deep Dive vereist een Pro abonnement." },
-        { status: 403 }
-      );
-    }
-
+    // TEMP: Pro check bypassed for testing
     const { problem, topic } = await req.json();
 
     if (!problem || !topic) {
