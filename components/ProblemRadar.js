@@ -422,6 +422,7 @@ export default function ProblemRadar() {
   const [showSugg, setShowSugg] = useState(false);
   const [suggLoading, setSuggLoading] = useState(false);
   const [upgraded, setUpgraded] = useState(false);
+  const [liveData, setLiveData] = useState(false);
   const suggTimer = useRef(null);
   const inputRef = useRef();
 
@@ -526,6 +527,7 @@ export default function ProblemRadar() {
     try {
       const data = await api("research", { query, sources: activeSrc, maxProblems: maxP });
       setResults(data);
+      setLiveData(!!data.liveData);
       if (!isPro) setScansUsed(data.scansLeft !== undefined ? Math.max(0, 3 - data.scansLeft) : s => s + 1);
       if (isPro) setHistory(h => [{ query, date: new Date().toISOString(), results: data }, ...h].slice(0, 50));
     } catch (e) {
@@ -677,7 +679,13 @@ export default function ProblemRadar() {
             <div style={{ background: C.s1, borderRadius: 20, padding: "24px 26px", border: `1px solid ${C.brd}`, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: C.acc, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>Research Report</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: C.acc, textTransform: "uppercase", letterSpacing: "0.1em" }}>Research Report</div>
+                    {liveData
+                      ? <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(5,150,105,0.12)", color: C.g, border: "1px solid rgba(5,150,105,0.3)", borderRadius: 20, padding: "2px 8px" }}>🟢 Live data</span>
+                      : <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(217,119,6,0.1)", color: C.y, border: "1px solid rgba(217,119,6,0.25)", borderRadius: 20, padding: "2px 8px" }}>🟡 Training data</span>
+                    }
+                  </div>
                   <h2 style={{ fontSize: 21, fontWeight: 800, margin: 0, color: C.t }}>{results.topic}</h2>
                 </div>
               </div>
