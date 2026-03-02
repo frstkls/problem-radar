@@ -836,6 +836,22 @@ export default function ProblemRadar() {
             <div style={{ fontSize: 48, marginBottom: 16 }}>📡</div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t, marginBottom: 8 }}>Discover what people actually need</h2>
             <p style={{ fontSize: 14, color: C.tM, maxWidth: 460, margin: "0 auto 36px", lineHeight: 1.7 }}>Enter any market or niche and ProblemRadar scans Reddit, Facebook Groups, forums, reviews, and social media to find real problems and opportunities.</p>
+            {/* USPs */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16, maxWidth: 860, margin: "0 auto 44px", textAlign: "left" }}>
+              {[
+                { icon: "🌐", title: "Live web data", body: "Scans Reddit, forums & reviews in real time — not AI guesses based on outdated training data." },
+                { icon: "🎯", title: "Problems scored & ranked", body: "Every problem gets an opportunity score (0–100) based on frequency, severity and market gap." },
+                { icon: "⚡", title: "From niche to idea in minutes", body: "Deep Dive, Idea Generator and Competitive Landscape turn raw problems into a validated concept." },
+                { icon: "🔒", title: "No fluff, no hallucinations", body: "Claude analyzes only real source snippets. Every insight is tied to actual quotes and URLs." },
+              ].map(({ icon, title, body }) => (
+                <div key={title} style={{ background: C.s1, borderRadius: 16, padding: "22px 20px", border: `1px solid ${C.brd}`, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: 26, marginBottom: 10 }}>{icon}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: C.t, marginBottom: 6 }}>{title}</div>
+                  <div style={{ fontSize: 12, color: C.tM, lineHeight: 1.6 }}>{body}</div>
+                </div>
+              ))}
+            </div>
+
             <div style={{ display: "flex", justifyContent: "center", gap: 18, flexWrap: "wrap", marginBottom: 44 }}>
               {[["🔍", "AI Research", "Analyzes real sources"], ["🧠", "AI Analysis", "Clusters & scores"], ["💡", "Idea Engine", "Generates concepts"], ["⚔️", "Landscape", "Maps competitors"]].map(([ic, t, d]) => (
                 <div key={t} style={{ background: C.s1, borderRadius: 16, padding: "22px 20px", border: `1px solid ${C.brd}`, width: 165, textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
