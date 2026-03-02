@@ -456,10 +456,10 @@ export default function ProblemRadar() {
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${C.brd}`, background: C.s1, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: 940, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 54 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <button onClick={() => { setResults(null); setTab("scan"); setError(null); setExpanded(null); setIdeas(null); setComp(null); setDD({}); setSelected(new Set()); }} style={{ display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: C.accG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff" }}>📡</div>
             <span style={{ fontSize: 18, fontWeight: 800, color: C.t }}>ProblemRadar</span>
-          </div>
+          </button>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {!isPro && <span style={{ fontSize: 12, color: C.tM }}><span style={{ color: scansUsed >= 3 ? C.r : C.g, fontWeight: 700 }}>{3 - scansUsed}</span> scans left</span>}
             <Tag color={isPro ? C.acc : C.tD} style={{ cursor: "pointer" }} onClick={() => !isPro && setPaywall("Pro features")}>{plan === "team" ? "👥 Team" : plan === "pro" ? "⚡ Pro" : "Free"}</Tag>
